@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+</head>
+<body>
+<button id="goBtn">Go</button>
+<script src="el.js"></script>
+<script src="lurker.js"></script>
+<script>
+  const goBtn = El.from("#goBtn", true);
+  goBtn.addEventListener("click", clickListener);
+  
+  let lurker = new Lurker({
+    // Lurker constructor takes a 3-prop obj: name (str), patterns (arr), and isActive (bool)
+    // Each 'pattern' obj has: typeFilter (f: event=>bool), targetFilter (f: event=>bool), actions (arr), and options (obj)
+    // Each 'action' obj has: determineArgs (f: optionsObj => argsArr) and callback(f: optionsArr => _) 
+    name: "lurker1",
+    patterns: [{
+      typeFilter: (event) => event.type === "click",
+      targetFilter: (event) => event.target === goBtn,
+      actions: [
+        {
+          determineArgs: (options) => [options.message],
+          callback: function(args){ alert(args[0]); }
+        }
+      ],
+      options: {
+        message: "Woo"
+      }
+    }],
+    isActive: true
+  });
+
+  function clickListener(event){
+    Lurker.handle(event);
+  }
+</script>
+</body>
+</html>

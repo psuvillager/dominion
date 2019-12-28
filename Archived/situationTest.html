@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+  <style>
+  #container{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: flex-start;
+  }
+  #locationsDiv{
+    width: 300px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: flex-start;
+    border: 2px solid blue;
+  }
+  .section{
+    width: 100px;
+    height: 100%;
+    margin: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: flex-start;
+    border: 1px solid grey;
+  }
+  .cardDiv{
+    margin: 10px;
+    padding: 10px;
+    background-color: #EEE;
+    text-align: center;
+  }
+  #buttonsDiv{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: flex-start;
+  }
+  .button{
+    margin: 10px 5px;
+    padding: 10px 15px;
+    border-radius: 15px;
+    background-color: blue; color: white;
+  }
+  </style>
+</head>
+<body>
+<div id="container">
+  <div id="locationsDiv">
+    <div id="handDiv" class="section">
+      <div class="cardDiv">card1</div>
+      <div class="cardDiv">card2</div>
+      <div class="cardDiv">card3</div>
+    </div>
+    <div id="playDiv" class="section">
+    </div>
+  </div>
+  <div id="buttonsDiv">
+    <button class="button">button1</button>
+    <button class="button">button2</button>
+  </div>
+</div>
+<script src="el.js"></script>
+<script>
+
+/*
+function logParentsByIds(ids){
+  ids.split(",").forEach(id => console.log(`${id}: ${document.getElementById(id).parentElement.id}`));
+}
+logParentsByIds("locationsDiv,handDiv,playDiv,buttonsDiv");
+*/
+/*
+//Situation class
+class Situation{
+  constructor(name, message, defs = {}){
+    this.name = name;
+    this.message = message;
+    this.switchWhen = defs.switchWhen || function(event, options){ return false; }
+    this.switch = defs.switch || function(event, options){ return null };
+    this.actWhen = defs.actWhen || function(event, options){ return false; }
+    this.act = defs.act || function(event, options){ return null };
+    this.options = defs.options || {};
+  }
+  static listen = (event) => {
+    // We expect turn.situation to refer to an appropriate situation instance, and we call 
+    //   its .actWhen and .switchWhen methods (passing the event and situation.options to them).
+    // These methods may (set situation.options and) call the .act and .switch methods respectively 
+    if(turn.situation.actWhen(event, turn.situation.options) === true){
+      turn.situation.act(event, turn.situation.options);
+    }
+    if(turn.situation.switchWhen(event, turn.situation.options)){
+      turn.situation.switch(event, turn.situation.options);
+    }
+  }
+  static addEventListenersToDom = (eventTypes, element = document) => {
+    // Takes an Array of valid Event types and, optionally, a valid HTML Element
+    // For each eventType inthe array, Situation.listen will be added as an eventListener
+    //   on that Element for the specified eventType
+    // (If no HTML ELement is specified, the listeners will be added to the Document object)
+    for(let type of eventTypes){
+      element.addEventListener(type, Situation.listen);
+    }
+  }
+}
+function defineSituations(){
+  let situtions = {};
+
+  situations.playingActions = new Situation(
+    "playingActions",
+    "Choose an action card to play",
+    {
+      actWhen: (event) => { 
+        return (event.type == "click" 
+          && isCardInLocation(event.target, handDiv) 
+          && getRenderedCard(event.target).types.includes["action"])
+      },
+      act: (event) => {
+        playCard(getRenderedCard(event.target))
+        // fire a custom cardPlayed event if this succeeds
+      },
+      switchWhen: (event) => {
+        
+        return (event.type == "cardResolved"
+          && turn.player.actions.filterCardsByType("action").length === 0)
+      },
+      switch: (event) => {
+        if(buyingCards){ turn.situation = buyingCards; }
+      }
+    }
+  );
+
+  situations.playingTreasures = new Situation(
+    "playingTreasures",
+    "Choose a treasure card to play",
+    {
+      actWhen: (event) => 
+        event.type == "click" 
+        && isCardInLocation(event.target, handDiv) 
+        && getRenderedCard(event.target).types.includes["treasure"],
+      act: (event) =>
+        playCard(getRenderedCard(event.target)),
+      switchWhen: (event) =>
+        turn.player.hand.filterCardsByType("treasure").length === 0,
+      switch: (event) => {
+        if(buyingCards){ turn.situation = buyingCards; }
+      }
+    }
+  );
+
+  return situations;
+}
+*/
+</script>
+</body>
+</html>

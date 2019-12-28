@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dominion</title>
+  <style>
+  </style>
+<style>
+#container{ width: 700px; margin: 0; padding: 0; border: 1px solid grey; }
+#logs{ width: 29%; float: right; margin: 0; padding: 0; overflow: auto; }
+.subcontainer{ width: 70%; overflow: hidden; border: 1px solid grey; }
+.header{ margin-top: 0; }
+.section{ float: left; margin: 10px; padding: 10px; border: 1px solid grey; }
+.section.section-below{ clear: both; }
+.noborder{ border: none; }
+</style>
+</head>
+<body> 
+
+<div id="container"></div>
+
+<script src="el.js"></script>
+
+<script>
+
+// Card and Pile Classes
+  class Card{
+    constructor(name, cost){
+      this.name = name;
+      this.readableName = toTitleCase(name);
+      this.renderedIn = null;
+      this.cost = cost;
+      this.types = [];
+      this.provides = { actions: 0, buys: 0, cards: 0, coins: 0, trashing: null, special: null };
+      this.points = 0;
+      this.triggers = {};
+    }
+
+    renderIn = htmlElement => {
+      htmlElement.dataset.name = this.name;
+      htmlElement.innerHTML = this.readableName;
+      this.renderedIn = htmlElement;
+    }
+    unrender = () => {
+      let htmlElement = this.renderedIn;
+      delete htmlElement.dataset.name;
+      htmlElement.innerHTML = "";
+      this.renderedIn = null;
+    }
+    play = turn => { console.log( `${card.name} has no 'play' method defined`); }
+    static getSource = () => "(not specified)";
+    static getDescription = () => [];
+    static getInitialCount = numPlayers => 10;
+    static new = () => new this.prototype.constructor;
+  }
+  class Copper extends Card{
+    constructor(){
+      super("Copper", 0);
+      this.types = ["treasure"];
+      this.provides.coins = 1;
+    }
+    play = (turn) => { turn.player.coins += this.provides.coins }
+    static getSource = () => "Dominion";
+    static getDescription = () => ["Gain 1 coin"];
+    static getInitialCount = (numPlayers) => (numPlayers > 4 ? 120 : 60);
+  }
+  class Silver extends Card{
+    constructor(){
+      super("Silver", 3);
+      this.types = ["treasure"];
+      this.provides.coins = 2;
+    }
+    play = (turn) => { turn.player.coins += this.provides.coins }
+    static getSource = () => "Dominion";
+    static getDescription = () => ["Gain 2 coins"];
+    static getInitialCount = (numPlayers) => (numPlayers > 4 ? 80 : 40);
+  }
+  class Gold extends Card{
+    constructor(){
+      super("Gold", 6);
+      this.types = ["treasure"];
+      this.provides.coins = 3;
+    }
+    play = (turn) => { turn.player.coins += this.provides.coins }
+    static getSource = () => "Dominion";
+    static getDescription = () => ["Gain 3 coins"];
+    static getInitialCount = (numPlayers) => (numPlayers > 4 ? 60 : 30);
+  }
+  class Estate extends Card{
+    constructor(){
+      super("Estate", 2);
+      this.types = ["victory"];
+      this.points = 1;
+    }
+    static getSource = () => "Dominion";
+    static getDescription = () => ["1 victory point"];
+    static getInitialCount = (numPlayers) => (numPlayers > 3 ? numPlayers * 6 : numPlayers * 7);
+  }
+  class Duchy extends Card{
+    constructor(){
+      super("Duchy", 5);
+      this.types = ["victory"];
+      this.points = 3;
+    }
+    static getSource = () => "Dominion";
+    static getDescription = () => ["3 victory points"];
+    static getInitialCount = (numPlayers) => (numPlayers > 3 ? numPlayers * 3 : numPlayers * 4);
+  }
+  class Province extends Card{
+    constructor(){
+      super("Province", 8);
+      this.types = ["victory"];
+      this.points = 6;
+    }
+    static getSource = () => "Dominion";
+    static getDescription = () => ["6 victory points"];
+    static getInitialCount = (numPlayers) => (numPlayers > 3 ? numPlayers * 3 : numPlayers * 4);
+  }
+  class Village extends Card{
+    constructor(){
+      super("Village", 3);
+      this.types = ["action"];
+      this.provides.actions = 2;
+      this.provides.cards = 1;
+    }
+    play = (turn) => {
+      turn.player.actions += 2;
+      drawX(turn.player, 1);
+    }
+    static getSource = () => "Dominion";
+    static getDescription = () => ["+2 actions","+1 card"];
+    static getInitialCount = () => (10);
+  }
+  class Smithy extends Card{
+    constructor(){
+      super("Smithy", 4);
+      this.types = ["action"];
+      this.provides.cards = 3;
+    }
+    play = (turn) => {
+      drawX(turn.player, 3);
+    }
+    static getSource = () => "Dominion";
+    static getDescription = () => ["+3 cards"];
+    static getInitialCount = () => (10);
+  }
+  class Market extends Card{
+    constructor(){
+      super("Market", 5);
+      this.types = ["action"];
+      this.provides.actions = 1;
+      this.provides.buys = 1;
+      this.provides.cards = 1;
+      this.provides.coins = 1;
+    }
+    play = (turn) => {
+      turn.player.actions += 1;
+      turn.player.buys += 1;
+      drawX(turn.player, 3);
+      turn.player.coins += 1;
+    }
+    static getSource = () => "Dominion";
+    static getDescription = () => ["+1 action", "+1 buy", "+1 card", "+1 coin"];
+    static getInitialCount = () => (10);
+  }
+  class ThroneRoom extends Card{
+    constructor(){
+      super("Throne Room", 4);
+      this.types = ["action"];
+    }
+    play = (turn) => {
+      const actionCards = filterCardsByType(turn.player.hand, "action");
+      if(actionCards.length === 0){ return; }
+
+      let
+        cardClass = convertStringTo( prompt("Play which card twice?"), "pascal"),
+        card = null;
+      while(!card){
+        if(card = findCardInstance(actionCards, cardClass)){
+          turn.player.actions += 2;
+          playCard(turn, card);
+          playCard(turn, card); // TODO: Avoid MOVING TWO COPIES of card when playing it twice
+        }                      // (Note: Use the card obj itself (giving each card an id?), rather than whatever copy we find in hand)
+        else{
+          cardClass = convertStringTo(prompt(`Couldn't play ${cardClass}. Play which card twice?`), "pascal");
+        }
+      }
+    }
+    static getSource = () => "Dominion";
+    static getDescription = () => ["Choose an Action card from your hand. Play it twice."];
+    static getInitialCount = () => (10);
+  }
+
+  class Pile extends Array{
+    constructor(cardClass, playerCount){
+      super();
+      let numNeeded = cardClass.getInitialCount(playerCount);
+      while(numNeeded-- > 0){
+        let makeCard = ()=> new cardClass;
+        let newCard = makeCard();
+        this.push(newCard);
+      }
+      //this.cardName = this[0].name;
+      this.cardClass = cardClass;
+      this.pileName = cardClass.name;
+      this.readableName = cardClass.readbleName;
+      this.displayCategory = "none"; // Update before render
+      this.types = this[0].types;
+      this.idString = convertStringTo(this.pileName, "kebab");
+      this.readableName = Pile.getHumanReadableName(this);
+      this.description = this[0].constructor.getDescription();
+    }
+    render = ()=>{ console.log(`render ${this.readableName} pile`)};
+    static getHumanReadableName(pile){
+      return toTitleCase(pile.pileName);
+    }
+  }
+
+// Helpers
+  function randomizeArray(arr){
+    let i = arr.length;
+    while(i > 0){
+      let rand = Math.floor(Math.random() * i--);
+      let temp = arr[i];
+      arr[i] = arr[rand];
+      arr[rand] = temp;
+    }
+    return arr;
+  }
+
+  function lastInArrayIfAny(arr){
+    // Ensures that arr is array-like, otherwise returns undefined
+    //   ie `length` property (enumerable or not) exists somewhere in arr's prototype chain 
+    if(!(length in arr)){ return undefined; }
+    // Ensures that arr includes at least one item, otherwise returns null  
+    if(arr.length === 0){ return null; }
+    // Both of the above tests passed, returns last item in arr
+    return arr[arr.length - 1];
+  }
+
+  function charTags(char){
+    // Called by toTitleCase
+    const tags = {
+      char: char,
+      upper: char && char !== char.toLowerCase(),
+      lower: char && char !== char.toUpperCase(),
+      hyphen: char === "-",
+      space: char === " ",
+      delimiter: char === "-" || char === " "
+    };
+    return tags;
+  }
+
+  function toTitleCase(str){
+    // Called by convertStringTo
+    if(!str){ return ""; }
+    let
+      trimmed = str.trim(),
+      initialCap = trimmed.slice(0, 1).toUpperCase() + trimmed.slice(1),
+      chars = Array.from(initialCap);
+    for(let i = 0; i < chars.length; i++){
+      let
+        curr = chars[i],
+        prev = (i > 0) ? chars[i - 1] : null,
+        currTags = charTags(curr),
+        prevTags = charTags(prev)
+      ;
+      currTags.upperFollowsLower = prevTags.lower && currTags.upper;
+      currTags.nonDelimiterFollowsDelimiter = prevTags.delimiter && !currTags.delimiter;
+      currTags.spaceFollowsSpace = prevTags.space && currTags.space;
+      //console.log("\n"); console.log(prevTags); console.log(currTags)
+      
+      if(currTags.upperFollowsLower){
+        chars.splice(i, 0, " ");
+        curr = chars[++i]; // Moves cursor to stay at the current character
+        continue;
+      }
+      if(currTags.nonDelimiterFollowsDelimiter){
+        //console.log(`nonDelimiterFollowsDelimiter at ${i} (${prev},${curr}` );
+        chars[i - 1] = " ";
+        chars[i] = curr.toUpperCase();
+        prev = chars[i - 1]; // Merely updates prev to show modified value
+        curr = chars[i]; // Merely updates curr to show modified value
+        continue;
+      }
+      if(currTags.spaceFollowsSpace){
+        chars.splice(i - 1, 1);
+        curr = chars[--i]; // Moves cursor to stay at the current character
+        continue;
+      }
+    }
+    //console.log(chars.join(""));
+    return chars.join("");
+  }
+
+  function convertStringTo(str, format){
+    // Note: has trouble with kebab case if spaces and hypens are interspersed (eg 'my- - var`)
+    if(!str){ return ""; }
+    let titleCase = toTitleCase(str);
+    if(format == "pascal"){ return titleCase.split(" ").join(""); }
+    if(format == "lower"){ return titleCase.toLowerCase(); }
+    if(format == "kebab"){ return titleCase.split(" ").join("-").toLowerCase(); }
+  }
+
+// Object Identification
+  function getRenderedCard(cardsArray, parentDiv, cardDiv){
+    let index = [...parentDiv.getElementsByClassName("cardDiv")].indexOf(cardDiv);
+    return cardsArray[index];
+  }
+
+  function getPileByName(pileName){
+    //...
+    return pilesObj[pileName].pile;
+  }
+
+  function getPileDivByName(pileName){
+    //...
+    return pilesObj[pileName].div;
+  }
+
+  function updatePileDiv(pileName){
+    const
+      pile = getPileByName(pileName),
+      pileDiv = getPileDivByName(pileName);
+      cardsLeftSpan = pileDiv.querySelector(".cardsLeft");
+    cardsLeftSpan.innerHTML = pile.length;
+  }
+
+  function getPlayerByName(playerName){
+    // (Might not be used yet)
+    return players.find(player => player.name == playerName);
+  }
+
+  function playerIndex(player){
+    //...
+    return players.findIndex(p => p.name == player.name);
+  }
+
+  function resetPlayerResources(player){
+    player.actions = 1;
+    player.buys = 1;
+    player.coins = 0;
+    return player;
+  }
+
+  function nextPlayer(turn){
+    const index = playerIndex(turn.player);
+    return (index + 1 == players.length) ? players[0] : players[index + 1];
+  }
+
+// Testing
+  function debugPilesSetup(piles){
+    console.log("Piles created:");
+    piles.forEach(pile => console.log(`${pile.pileName}: ${pile.length} (${pile.description})` +"\n"));
+  }
+
+  function debugRenderCard(cardsArr){
+    for(let card of cardsArr){
+      let instance = new card;
+      instance.renderIn(El.make("DIV", {parent: "#generalDiv", style: {border: "1px solid grey"}}, true));
+    }
+  }
+
+  function debugCardGain(){
+    let
+      player = players[0],
+      sPileName = Village.name,
+      numToGain = 12;
+      sGainTo = "discards";
+    gainXFromPile(player, sPileName, numToGain, sGainTo);
+    console.log(`player[${sGainTo}].length = ${player[sGainTo].length}`);
+    //console.log(`Cards in ${ sGainTo || "discards"}: ${player[sGainTo].map(card => card.name)}`);
+    console.log(`${sPileName}.length = ${getPile(sPileName).length}`);
+  }
+
+  function debugInitializeHands(players){
+    players.forEach(player => {
+      console.log(player.name + " " + player.hand.map(card => card.name) + " " + player.discards.map(card => card.name));
+    });
+  }
+
+  function debugRandomizeArray(){
+    //...
+    console.log(randomizeArray([1,2,3,4,5,6,7]));
+  }
+
+  function debugnextPlayer(){
+    const secondPlayer = nextPlayer(players[0]);
+    console.log("players: " + players.map(p=>p.name));
+    console.log("second player: " + secondPlayer.name);
+  }
+
+  function debugNewTurn(){
+    console.log(players[0]);
+    let turn = new Turn(players[0]);
+    turn = new Turn();
+    turn = new Turn();
+    turn = new Turn();
+    turn = new Turn();
+    Turn.turns.forEach(turn => console.log(turn));
+  }
+
+  function debugToTitleCase(){
+    const strings = ["bigFish", "BigFish", "big fish", "big-fish", "big-Fish", "  big  fish", "big fat fish", "big-fat-fish", "big--fat--fish", "big- - fat  - -fish", "big- - Fat  - -Fish", " Big      Fat      Fish "];
+    for(let string of strings){
+      console.log(`${string} --> ${toTitleCase(string)}` + "\n");
+    }
+  }
+
+  function debugConvertStrings(){
+    const strings = ["bigFish", "BigFish", "big fish", "big-fish", "big-Fish", "  big  fish", "big fat fish", "big-fat-fish", "big--fat--fish", "big- - fat  - -fish", "big- - Fat  - -Fish", " Big      Fat      Fish "];
+    const formats = ["pascal", "lower", "kebab"];
+    for(let format of formats){
+      console.log(` ------ ${ format }: ------`);
+      for(let string of strings){
+        console.log(`${string} --> ${toTitleCase(string)} --> ${convertStringTo(string, format)}` + "\n");
+      }
+    }
+  }
+
+// UI
+function clearContentsOf(htmlElement){
+  // Empties the element's innerHTML
+  if("innerHTML" in htmlElement){
+    htmlElement.innerHTML = "";
+  }
+  //console.log("innerHTML: " + htmlElement.innerHTML);
+  return htmlElement;
+}
+
+function renderHandDiv(turn){
+  // Resets handDiv (w/ header text) and renders the current hand's cards
+  const handDiv = El.from("#handDiv", true);
+  clearContentsOf(handDiv);
+  El.make("DIV", { html: `<strong>Hand</strong>`, parent: handDiv });
+  for(card of turn.player.hand){
+    card.renderIn(El.make("DIV", { parent:handDiv, classes: ["cardDiv"] }, true));
+  }
+  return handDiv;
+}
+
+function renderPlayDiv(turn){
+  // Resets playDiv (w/ header text) and renders the current inPlay cards
+  const playDiv = El.from("#playDiv", true);
+  clearContentsOf(playDiv);
+  El.make("DIV", { html: `<strong>In Play</strong>`, parent: playDiv });
+  //console.log(turn.player.inPlay);
+  for(card of turn.player.inPlay){
+    card.renderIn(El.make("DIV", { parent:playDiv, classes: ["cardDiv"] }, true));
+  }
+  return playDiv;
+}
+
+function renderCountsDiv(turn){
+  // Gets values for active player and displays them in (newly cleared) countsDiv
+  // (Values include counts of cards in deck/hand/discards, and remaining actions/buys/coins)
+  //console.log("renderCountsDiv...");
+  const
+    countsDiv = El.from("#countsDiv", true),
+    player = turn.player,
+    name = player.name,
+    counts = {
+      deck: player.deck.length,
+      hand: player.hand.length,
+      discards: player.discards.length,
+      actions: player.actions,
+      buys: player.buys,
+      coins: player.coins
+    }
+  ;
+  clearContentsOf(countsDiv);
+  El.make("DIV", { html: `<strong>${name}</strong>`, parent: countsDiv });
+  for(let key of Object.keys(counts)){
+    El.make("DIV", { html: `${key}: ${counts[key]}`, parent: countsDiv });
+  }
+  return countsDiv;
+}
+
+// Utilities
+function playCard(turn, card){
+  console.log(`turn.phase: ${turn.phase}`);
+  let
+    player = turn.player,
+    hand = player.hand,
+    inPlay = player.inPlay,
+    ind = hand.findIndex(c => c.name === card.name);
+  // Spends an action
+  if(turn.phase == "action"){
+    if(player.actions <= 0){
+      throw new RangeError(`No actions remaining for ${player.name} to play ${card.name}`);
+    }
+    player.actions--;
+  }
+  // Moves card from hand to play area, takes card's action, and renders playerDiv sections
+  inPlay.push(hand.splice(ind, 1)[0]);
+  card.play(turn);
+  renderCountsDiv(turn);
+  renderHandDiv(turn);
+  renderPlayDiv(turn);
+  
+
+
+  // TODO: This is failing to change the output message to "Choose a card to buy"...
+  checkResources(turn);
+
+
+
+}
+
+function buyCardFromPile(pileName, gainTo = "discards"){
+  const pile = getPileByName(pileName);
+  if(pile.length > 0 && turn.player.buys > 0 && turn.player.coins >= pile[0].cost){
+    turn.player.coins -= pile[0].cost;
+    gain1FromPile(turn.player, pileName, gainTo);
+  }
+}
+
+function gain1FromPile(player, pileName, gainTo = "discards"){  
+  const pile = getPileByName(pileName);
+  // Returns false, implying failure to gain
+  if(pile.length === 0){
+    return false;
+  }
+  // Moves the card
+  player[gainTo].push(pile.pop());
+  // Updates the DOM
+  updatePileDiv(pileName);
+  // Returns true, implying successful gain
+  return true;
+}
+
+function gainXFromPile(player, pileName, numToGain, gainTo = "discards"){
+  let pile = getPileByName(pileName);
+
+  while(numToGain-- > 0 && pile.length > 0){
+    gain1FromPile(player, pileName, gainTo);
+  }
+}
+
+function shuffle(player){
+  player.deck = randomizeArray(player.discards.slice());
+  player.discards.length = 0;
+}
+
+function draw1(player){
+  if(player.deck.length === 0){ shuffle(player); }
+  if(player.deck.length === 0){ return; }
+  player.hand.push(player.deck.pop());
+}
+
+function drawX(player, numCards){
+  while(numCards-- > 0){
+    draw1(player);
+  }
+}
+
+function getPileCounts(piles){
+  return piles.reduce( (counts, pile) => {
+    counts[pile.pileName] = pile.length;
+    return counts;
+  }, {});
+}
+
+function gameOver(players){
+  const
+    overOnProvinces = () => getPile(Province.name).length === 0,
+    overOnPiles = () => Object.values(getPileCounts(piles)).filter(val => val === 0).length >= (players.length < 5 ? 3 : 4);
+  return(overOnProvinces() || overOnPiles());
+}
+
+function getWinner(players){
+  let winningNameAndScore = Object.entries(getScores(players)).reduce( (maxEntry, entry) => {
+    let score = entry[1], maxScore = maxEntry[1];
+    if(score >= maxScore){ maxEntry = entry; }  // Note: assumes later players got fewer turns
+    return maxEntry;
+  }, [null, -Infinity]);
+  let winningName = winningNameAndScore[0]
+  return winningName;
+}
+
+function getScores(players){
+  return players.reduce( (scores, player) => {
+    scores[player.name] = getScore(player);
+    return scores;
+  }, {});
+}
+
+function getScore(player){
+  let allCards = player.deck.concat(player.hand).concat(player.discards);
+  return sumCardPoints(allCards) + player.points;
+}
+
+function sumCardPoints(arr){
+  //...
+  return arr.reduce( (sum, card) => sum += card.points, 0);
+}
+
+function findCardInstance(location, cardClass){
+  //console.log("findCardInstance...");
+  return location.find(card => convertStringTo(card.name, "pascal") == cardClass);
+}
+
+function filterCardsByType(location, type){
+  //...
+  return location.filter(card => card.types.includes(type));
+}
+
+function getValidTypeForPhase(phase){
+  if(phase == "action"){ return "action"; }
+  if(phase == "buy"){ return "treasure"; }
+  return;
+}
+
+function validInPhase(card, phase){
+  //console.log("validInPhase...");
+  return card.types.includes(getValidTypeForPhase(phase));
+}
+
+function noCardsOfType(location, type){
+  //...
+  return filterCardsByType(location, type).length === 0;
+}
+
+function phaseEndForced(turn){
+  let phase = turn.phase, player = turn.player;
+  if(
+    phase == "action" && filterCardsByType(player.hand, "action").length === 0
+    || phase == "action" && player.actions === 0
+    || phase == "buy"    && player.buys === 0
+  )
+  { return true; }
+}
+
+function checkResources(turn){
+  let player = turn.player;
+  if(turn.phase == "action"){
+    if((player.actions === 0) || (noCardsOfType(player.hand, "action"))){
+      Turn.nextPhase(turn);
+    }
+  }
+  if(turn.phase == "buy"){
+    console.log("buy phase");
+    if(noCardsOfType(player.hand, "treasure")){
+      console.log("no treasure cards");
+      Lurker.setActiveLurker(Lurker.registry.buyCard)
+    }
+    if(player.buys === 0){
+      Turn.nextPhase(turn);
+    }
+  }
+}
+
+function computerTurn(turn){
+  //...
+  //
+}
+
+function humanTurn(turn){
+
+}
+
+// Lurker class
+class Lurker{
+  // (Use: Add an eventListener to the DOM that (checks for the appropriate trigger class 
+  //  on event.target and) fires the handler, passing it any needed options)
+  constructor({name, message, handler}){
+    this.name = name;
+    this.message = message;
+    //this.respondsToClass = this.name + "Trigger";
+    this.handler = handler;
+    Lurker.initializeRegistryIfNecessary();
+    Lurker.registry[name] = this;
+    console.log(Lurker.registry);
+    return this;
+  }
+  static initializeRegistryIfNecessary = () => { 
+    if(!this.registry){ this.registry = {}; }
+    return this.registry; 
+  }
+  static getActiveLurker(){
+    //...
+    return Lurker.activeLurker || null;
+  }
+  static setActiveLurker(lurker){
+    Lurker.activeLurker = lurker;
+    clearContentsOf(messageDiv);
+    if(lurker && lurker.message){ messageDiv.innerHTML = lurker.message; }
+  }
+}
+
+//Turn class
+class Turn{
+  constructor(){
+    // Ensures that turns array exists
+    // (If it is empty, gets first player, otherwise gets next player)
+    // Pushes the newly constructed turn to turns array
+    // Calls .start() on the newly constructed turn
+    Turn.defineTurnsIfNecessary();
+    const player = (Turn.turns.length === 0) ? players[0] : nextPlayer(Turn.currentTurn());
+    this.player = player;
+    this.type = player.type;
+    this.activities = [];
+    this.phase = "start";
+    Turn.turns.push(this);
+    this.start();
+  }
+  start = () => {
+    //console.log("turn.start...");
+    // Resets actions, buys, and coins
+    // Enters action phase (enters buy phase if player has no action cards)
+    // Instructs human, or takes computer turn
+    resetPlayerResources(this.player);
+    Turn.nextPhase(this);
+    console.log(filterCardsByType(this.player.hand, "action").length === 0);
+    if(filterCardsByType(this.player.hand, "action").length === 0){
+      console.log("Go to next phase...");
+      Turn.nextPhase(this);
+    }
+    if(this.player.type == "human"){
+      renderCountsDiv(this);
+      renderHandDiv(this);
+      clearContentsOf(El.from("#playedDiv", true));
+    }
+    else { computerTurn(this); }
+    return this;
+  }
+  cleanUp = () => {
+    let
+      hand = turn.player.hand,
+      inPlay = turn.player.inPlay
+      discards = turn.player.discards;
+    while(hand.length){ discards.push(hand.pop()); }
+    while(inPlay.length){ discards.push(inPlay.pop()); }
+    drawX(turn.player, 5);
+  }
+  static defineTurnsIfNecessary = () => { if(!this.turns){ this.turns = []; return this.turns; }}
+  static resetTurns = () => { this.defineTurnsIfNecessary(); this.turns.length = 0; }
+  static currentTurn = () => lastInArrayIfAny(this.turns);
+  static nextPhase(turn){
+    //console.log("Turn.nextPhase...");
+    if(turn.phase == "start"){
+      turn.phase = "action";
+      //console.log("Lurker.registry:")
+      //console.log(Lurker.registry)        
+      Lurker.setActiveLurker(Lurker.registry.playAction);
+    }
+    else if(turn.phase == "action"){
+      turn.phase = "buy";
+      if(noCardsOfType(turn.player.hand, "treasure")){
+        Lurker.setActiveLurker(Lurker.registry.buyCard);
+      }
+      Lurker.setActiveLurker(Lurker.registry.playTreasure);
+    }
+    else if(turn.phase == "buy"){
+      turn.phase = "cleanup";
+      Lurker.setActiveLurker(null);
+      turn.cleanUp();
+      turn = new Turn();
+    }
+    return turn.phase;
+  }
+}
+
+// Setup
+function initializeMarkup(){
+  // Makes logs and subcontainers:
+  // supplyDiv (victory, treasure, and general)
+  // playerDiv (counts, hand, and play)
+  // outputDiv (message)
+  El.make("DIV",
+    {
+      id: "logs",
+      parent: "#container",
+      html: "logs"
+    },
+  true
+  );
+  El.make("DIV",
+    {
+      id: "supplyDiv",
+      classes: ["subcontainer"],
+      parent: "#container",
+      children: [
+        { "H3":  { html: "Supply:", classes: ["header"] } },
+        { "DIV": { id: "victoryDiv",  classes: ["section"] } }, 
+        { "DIV": { id: "treasureDiv", classes: ["section"] } },
+        { "DIV": { id: "generalDiv" , classes: ["section"] } }
+      ]
+    },
+    true
+  );
+  El.make("DIV",
+    {
+      id: "playerDiv",
+      classes: ["subcontainer"],
+      parent: "#container",
+      children: [
+        { "DIV": { id: "countsDiv",  classes: ["section"] } }, 
+        { "DIV": { id: "handDiv", classes: ["section"] } },
+        { "DIV": { id: "playDiv" , classes: ["section"] } }
+      ]
+    },
+    true
+  );
+  El.make("DIV",
+    {
+      id: "outputDiv",
+      classes: ["subcontainer"],
+      parent: "#container",
+      children: [
+        { "DIV": { id: "buttonsDiv", classes: ["section", "noborder"] } },
+        { "DIV": { id: "messageDiv", classes: ["section", "section-below", "noborder"] } }
+      ]
+    },
+  true
+  );
+}
+
+function initializePlayers(defs){
+  const randomizedDefs = randomizeArray(defs);
+  return randomizedDefs.map(def => {
+    return {
+      name: def.name,
+      type: def.type,
+      deck: [],
+      hand: [],
+      discards: [],
+      inPlay: [],
+      setAside: [],
+      actions: 0,
+      buys: 0,
+      coins: 0,
+      points: 0
+    }
+  });
+}
+
+function defineLurkers(){
+  const playActionLurker = new Lurker({
+    name: "playAction", // playActionLurker.name
+    message: "Choose an action card to play", // playActionLurker.message
+    // A lurker's .handler method will be callable by any eventListener 
+    // The listener must pass an options object including .eventType & .target
+    // The lurker can respond dynamically based on eventType and target
+    handler: (options) => { // playActionLurker.handler
+      //console.log("playActionLurker's handler invoked");
+      if(options.eventType == "click" && options.target.parentElement == handDiv){
+        let card = getRenderedCard(turn.player.hand, options.target.parentElement, options.target);
+        if(card.types.includes("action")){
+          //console.log("It's an action card! (possibly a cheaty Copper)");
+          playCard(turn, card);
+        }
+      }
+    }
+  });
+  const playTreasureLurker = new Lurker({
+    name: "playTreasure",
+    message: "Choose a treasure card to play",
+    handler: (options) => {
+      if(options.eventType == "click" && options.target.parentElement == handDiv){
+        let card = getRenderedCard(turn.player.hand, options.target.parentElement, options.target);
+        if(card.types.includes("treasure")){
+          //console.log("It's a treasure card!");
+          playCard(turn, card);
+        }
+      }
+      if(noCardsOfType(turn.player.hand, "treasure")){
+        Lurker.setActiveLurker(Lurker.registry.buyCard);
+      }
+    }
+  });
+  const buyCardLurker = new Lurker({
+    name: "buyCard",
+    message: "Choose a card to buy",
+    handler: (options) => {
+      if(options.eventType == "click" && options.target.classList.contains("pile")){
+
+
+        // TODO: Debugging...
+
+        const pile = pilesObj.getRenderedPile(options.target);
+        console.log(pile.pileName);
+        console.log(pile.length);
+        console.log(pile.pileName);
+        console.log(pile.pileName);
+
+
+        if(pile.length > 0 && turn.player.buys > 0 && turn.player.coins >= pile[0].cost){
+          // Lets us set an alternate 'gainTo' location in options when invoking this handler
+          const gainTo = options.gainTo || "discards";
+          buyCardFromPile(pile.pileName, gainTo);
+        }
+      }
+      if(turn.player.buys === 0){
+        // Not sure what next lurker will be, so setting it to null for now
+        Lurker.setActiveLurker(null);
+      }
+    }
+  });
+}
+
+function initializePilesObj(victoryCards, treasureCards, selectedCards, numPlayers){
+
+  // Defines a piles array with an appropriately sized Pile for each kingdom card
+  const
+    victoryPiles = victoryCards.map(cardClass => new Pile(cardClass, numPlayers)),
+    treasurePiles = treasureCards.map(cardClass => new Pile(cardClass, numPlayers)),
+    selectedPiles = selectedCards.map(cardClass => new Pile(cardClass, numPlayers)),
+      groups = [victoryPiles, treasurePiles, selectedPiles],
+    allPilesArr = victoryPiles.concat(treasurePiles).concat(selectedPiles),
+    pilesObj = {};
+
+  // Adds entries to pilesObj (key is the pileName, val is an obj w/ 2 props: 'pile' and 'div')
+  for(let pile of allPilesArr){
+    pilesObj[pile.pileName] = { pile: pile, div: null };
+  }
+
+  // Chooses the correct DOM section in which to add the piles of each group
+  for(let group of groups){
+    let sectionSelector = (group == victoryPiles) 
+      ? "#victoryDiv"
+      : (group == treasurePiles)
+        ? "#treasureDiv"
+        : "#generalDiv"
+    ;
+    let section = El.from(sectionSelector, true);
+
+    // Makes a DIV for each pile (with a `SPAN.cardsLeft` to shadow pile.length)
+    // And adds each new DIV to the DOM and to 'pilesObj'
+    for(let pile of group){
+      let cardInstance = new (pile.cardClass)();
+      let div = El.make("DIV",
+        {
+          html: `(<span class="cardsLeft">${pile.length}</span>)  ${pile.readableName}  $${cardInstance.cost}`,
+          classes: ["pile"],
+          data: [{pileName: pile.pileName}],
+          parent: section,
+          styles: [{"margin":"2px 0", "padding": "1px"}],
+        },
+        true
+      );
+      pilesObj[pile.pileName].div = div;
+    }
+  }
+  // Defines a static method of pilesObj that gets the pile rendered in a particular div
+  Object.defineProperty(pilesObj, "getRenderedPile", {
+    enumerable: false,
+    configurable: false,
+    writable: false,
+    value: function(pileDiv){
+      const pileName = pileDiv.dataset.pileName;
+      const pile = pilesObj[pileName].pile;
+      return pile;
+    }
+  });
+  return pilesObj;
+}
+
+function startGame(players){
+  players.forEach(p => {
+    gainXFromPile(p, Estate.name, 3);
+    gainXFromPile(p, Copper.name, 7);
+    drawX(p, 5);
+  });
+  return new Turn(players[0]);
+}
+
+// Handlers
+function clickHandler(event){
+  let options = { eventType: event.type, target: event.target };
+  Lurker.getActiveLurker().handler(options);
+}
+
+
+// ------- Main -------
+
+// Adds listeners to DOM
+document.addEventListener("click", clickHandler);
+
+// Primary data arrays (used in initializing other globals)
+const
+  victoryCards = [Estate, Duchy, Province],
+  treasureCards = [Copper, Silver, Gold],
+  selectedCards = [Village, Smithy, Market, ThroneRoom],
+  playerDefs = [{ name: "Human", type: "human" },{ name: "Elephant", type: "human" }];
+
+// Other globals
+initializeMarkup(); // Magically defines global variables referring to divs by their IDs?
+defineLurkers(); //Adds lurkers to Lurker.registry
+const
+  pilesObj = initializePilesObj(victoryCards, treasureCards, selectedCards, playerDefs.length),
+  players = initializePlayers(playerDefs),
+  turns = Turn.defineTurnsIfNecessary();
+let
+  turn = startGame(players); // Draws initial hands, and sets 'turn' to first player's turn
+
+
+// UI plan
+/*
+Clicking a pileDiv will run different functions based on context (eg buy, gain, embargo)
+Clicking a cardDiv (for cards in hand) will do the same (eg play, trash, discard)
+In every case, the click should get the card name and use it to look up card info.  
+**For card instances, the div's index in the handDiv corresponds to the card's index in the hand array. The handDiv needs to be updated if the hand array changes
+**For piles, if we're gaining a card, we'll pop the top instance and push it to the discards array. The pileDiv does not need to be updated (The discardsDiv technically should, but whatevs.)
+*/
+
+//Turns plan
+/*
+// Each turn
+check player type and take human turn or computer turn
+check game over (& announce outcome or proceed)
+// computer turns
+check game over (& announce outcome or proceed)
+action - while actions > 0 && actionCards > 0 { villages, cantrips, other cards (always preferring draws) }
+buy - while buys > 0 { buy most expensive (randomize ties) }
+cleanup - discard all, draw hand, go to human turn
+*/
+
+</script>
+</body>
+</html>
