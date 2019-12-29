@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+</head>
+<body>
+<script>
+  const origPlayers = new Map();
+  origPlayers.set("MrBob", {
+    name: "MrBob",
+    readableName: "Mr Bob",
+    hand: ["card1", "card2", "card3"]
+  });
+  origPlayers.set("MsChris", {
+    name: "MsChris",
+    readableName: "Ms Chris",
+    hand: ["card4", "card5", "card6"]
+  });
+  origPlayers.set("MsSara", {
+    name: "MsSara",
+    readableName: "Ms Sara",
+    hand: ["card7", "card8", "card9"]
+  });
+  const copyMapStartingWith = function(map, startWith){
+    // Makes a new Map where the first entry has the key `startWith`. All subsequent
+    //   entries are included, followed by all the entries from the beginning of the
+    //   original map, ending with the entry that originally preceded `startWith`.
+    const kvArray = [...map];
+    const startingIndex = kvArray.findIndex(entry => entry[0] === startWith);
+    const lastShallBeFirst = kvArray.splice(startingIndex);
+    lastShallBeFirst.push(...kvArray);
+    return new Map(lastShallBeFirst);
+  }
+  const reorderedPlayers = copyMapStartingWith(origPlayers, "MsChris");
+  console.log([...reorderedPlayers]);  
+</script>
+</body>
+</html>
