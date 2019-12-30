@@ -1,5 +1,8 @@
 const http = require('http');
 
+// See also:
+//  "Module": http://www.java2s.com/Tutorials/Javascript/Node.js_Tutorial/1000__Node.js_Module_System.htm
+
 const
   serverModifications = {}, // Customize here
   serverOptions = setServerOptions(serverModifications)
