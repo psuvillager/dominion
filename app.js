@@ -8,6 +8,7 @@ startServer(serverOptions);
 
 
 function processRequest(req, res){
+  console.log("INCOMING REQUEST: " + req.method + " " + req.url);
   responseBody = "woo";
   res.statuscode = 200;
   res.setHeader("Content-Type", "text/plain");
