@@ -1,26 +1,13 @@
 const http = require('http');
 
 const
-  port = 3000,
-  hostname = "127.0.0.1",
   body = "woo",
   callback = () => {
     console.log(`Server running at http://${hostname}:${port}`);
-  }
+  },
+  serverModifications = {}, // Customize here
+  serverOptions = setServerOptions(serverModifications)
 ;
-//const
-//  serverModifications = {}, // Customize here
-//  serverOptions = {
-//    requestHandler: processRequest
-//  };
-//serverOptions = setServerOptions(serverModifications);
-
-let serverOptions = {
-  port: 3000,
-  hostname: "127.0.0.1",
-  requestHandler: processRequest,
-  callback: () => { console.log(`Server running at http://${hostname}:${port}`); }
-}
 startServer(serverOptions);
 
 
@@ -31,56 +18,45 @@ function processRequest(req, res){
   res.end(body);
 }
 
+function setServerOptions(modifications = {}){
 
-/*
-// I need to customize how processRequest behaves, based on a `responseOptions`
-//   object. This object needs to be a modifiable version of the 
-//   `defaultResponseOptions` property of the `serverOptions` object passed
-//   in to `startServer`.
-function processRequest(req, res){
-  
-  
-  //res.statuscode = serverOptions.responseDefaultStatusCode;
-  //if(typeof responseHeaders === "Object"){
-  //  Object.keys(getResponseHeaders(defaultHeaders, modifications)).forEach(key => {
-  //    res.setHeader(key, responseHeaders[key]);
-  //  });
-  //}
-  //res.end(getResponseBody(bodyOptions));
-  
-  res.statusCode = 200;
-  res.setHeader("Content-Type", "text/plain");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.end("Hello World!");
-}
+  // Determines properties
+  const
+    defaultPort = 3000,
+    port = modifications.port || defaultPort;
+  const    
+    defaultHostname = "127.0.0.1",
+    hostname = modifications.hostname || defaultHostname;
+  const
+    defaultCallback = () => {
+      const port = defaultPort, hostname = this.hostname;
+      console.log(`Server running at http://${hostname}:${port}`);
+    },
+    callback = modifications.callback || defaultCallback;
+  const
+    // (Avoids assuming `processRequest` exists)
+    defaultRequestHandler = processRequest ? processRequest : null,
+    requestHandler = modifications.requestHandler || defaultRequestHandler;
+  //const
+  //  defaultResponseOptions = {
+  //    statusCode: 200,
+  //    headers: {
+  //      "Content-Type": "text/plain",
+  //      "Access-Control-Allow-Origin": "*",
+  //    },
+  //    body: "Hello World!",
+  //  },
+  //  responseOptions = modifications.responseOptions || defaultResponseOptions;
 
-
-// The functions below are boilerplate
-
-function setServerOptions(modifications){
-  const defaultServerOptions = {
-    port: 3000,
-    hostname: "127.0.0.1", // Change this for custom hosts
-    callback: (port, hostname = "") => console.log("Server running " +
-      hostname ? `at http://${hostname}:${port}` : `on port ${port}`
-    ),
-    
-    //defaultResponseOptions: {
-    //  statusCode: 200,
-    //  headers: {
-    //    "Content-Type": "text/plain",
-    //    "Access-Control-Allow-Origin": "*",
-    //  },
-    //  body: "Hello World!",
-    //};
+  // Assigns properties to object
+  return {
+    port: port,
+    hostname: hostname,
+    callback: callback,
+    requestHandler: requestHandler,
+    //responseOptions: responseOptions
   };
-  return defaultServerOptions;
-  //const modifiedServerOptions = {};
-  //modifications = modifications || {};
-  //Object.assign(modifiedServerOptions, defaultServerOptions, modifications);
-  //return modifiedServerOptions;
 }
-*/
 
 function startServer(opts){
   const server = http.createServer(opts.requestHandler);
