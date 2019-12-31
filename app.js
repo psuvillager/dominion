@@ -40,16 +40,16 @@ function setServerOptions(modifications = {}){
     requestHandler = modifications.requestHandler || defaultRequestHandler;
   
   // NOTE: processRequest currently defines its own response options, ignoring these
-  //const
-  //  defaultResponseOptions = {
-  //    statusCode: 200,
-  //    headers: {
-  //      "Content-Type": "text/plain",
-  //      "Access-Control-Allow-Origin": "*",
-  //    },
-  //    body: "Hello World!",
-  //  },
-  //  responseOptions = modifications.responseOptions || defaultResponseOptions;
+    //const
+    //  defaultResponseOptions = {
+    //    statusCode: 200,
+    //    headers: {
+    //      "Content-Type": "text/plain",
+    //      "Access-Control-Allow-Origin": "*",
+    //    },
+    //    body: "Hello World!",
+    //  },
+    //  responseOptions = modifications.responseOptions || defaultResponseOptions;
 
   // Assigns properties to object
   return {
