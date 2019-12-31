@@ -12,6 +12,7 @@ startServer(serverOptions);
 
 function processRequest(req, res){
   console.log("INCOMING REQUEST: " + req.method + " " + req.url);
+  writeReadFile(req.url);
   responseBody = "woo";
   res.statuscode = 200;
   res.setHeader("Content-Type", "text/plain");
@@ -70,4 +71,11 @@ function startServer(opts){
     else server.listen(opts.port, opts.hostname);
   }
   else server.listen(opts.port);
+}
+
+function readWriteFile(url){
+  const fs = require('fs'); 
+  let testName = url.slice(-4,-1) + ".txt";
+  fs.writeFileSync(testName, testname);
+  console.log("written and read: " + fs.readFileSync(testName).toString()); 
 }
