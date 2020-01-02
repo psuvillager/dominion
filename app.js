@@ -2,6 +2,8 @@ const http = require('http');
 
 // See also:
 //  "Module": http://www.java2s.com/Tutorials/Javascript/Node.js_Tutorial/1000__Node.js_Module_System.htm
+//  http.createServer: https://nodejs.org/api/https.html#https_https_createserver_options_requestlistener
+//  response.writeHead: https://nodejs.org/api/http.html#http_response_writehead_statuscode_statusmessage_headers
 
 const
   serverModifications = {}, // Customize here
@@ -9,15 +11,16 @@ const
 ;
 startServer(serverOptions);
 
-
-function processRequest(req, res){
+function onRequest(req, res){
   console.log("INCOMING REQUEST: " + req.method + " " + req.url);
   //writeReadFile(req.url);
   responseBody = "woo";
   res.statuscode = 200;
+  //response.writeHead(200, {"Content-Type": "text/plain"});
   res.setHeader("Content-Type", "text/plain");
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.end(responseBody);
+  res.write(responseBody);
+  res.end();
 }
 
 function setServerOptions(modifications = {}){
@@ -36,11 +39,11 @@ function setServerOptions(modifications = {}){
     },
     callback = modifications.callback || defaultCallback;
   const
-    // (Avoids assuming `processRequest` exists)
-    defaultRequestHandler = processRequest ? processRequest : null,
+    // (Avoids assuming `onRequest` exists)
+    defaultRequestHandler = onRequest ? onRequest : null,
     requestHandler = modifications.requestHandler || defaultRequestHandler;
   
-  // NOTE: processRequest currently defines its own response options, ignoring these
+  // NOTE: onRequest currently defines its own response options, ignoring these
     //const
     //  defaultResponseOptions = {
     //    statusCode: 200,
