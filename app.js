@@ -1,4 +1,5 @@
 const http = require('http');
+const fs = require('fs');
 
 // See also:
 //  "Module": http://www.java2s.com/Tutorials/Javascript/Node.js_Tutorial/1000__Node.js_Module_System.htm
@@ -12,8 +13,9 @@ const
 startServer(serverOptions);
 
 function onRequest(req, res){
+  //console.log(req);
   console.log("INCOMING REQUEST: " + req.method + " " + req.url);
-  //writeReadFile(req.url);
+  writeReadFile(req.url);
   responseBody = "woo";
   res.statuscode = 200;
   //response.writeHead(200, {"Content-Type": "text/plain"});
@@ -76,9 +78,9 @@ function startServer(opts){
   else server.listen(opts.port);
 }
 
-function readWriteFile(url){
-  const fs = require('fs'); 
-  let testName = url.slice(-4,-1) + ".txt";
-  fs.writeFileSync(testName, testname);
+function writeReadFile(url){
+  let testName = "." + url + ".txt";
+  console.log(testName);
+  fs.writeFileSync(testName, testName);
   console.log("written and read: " + fs.readFileSync(testName).toString()); 
 }
