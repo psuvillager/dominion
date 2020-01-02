@@ -9,7 +9,11 @@ function randomizeArray(arr){
   return arr;
 }
 
-function sortNumeric(arr){ return arr.sort( (a,b) => a - b); }
+function sortNumeric(arr, descending){
+  return arr.sort( (a, b) =>
+    (a - b) * (descending ? -1 : 1)
+  );
+}
 
 function lastInArrayIfAny(arr){
   // Ensures that arr is array-like, otherwise returns undefined
