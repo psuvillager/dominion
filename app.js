@@ -15,9 +15,10 @@ startServer(serverOptions);
 function onRequest(req, res){
   console.log("INCOMING REQUEST: " + req.method + " " + req.url);
   //writeReadFile(req.url);
-  responseBody = "woo";
+  let html = `<h2>woo</h2>`;
+  responseBody = html;
   res.statuscode = 200;
-  //response.writeHead(200, {"Content-Type": "text/plain"});
+  res.setHeader("Content-Type", "text/html");
   res.setHeader("Content-Type", "text/plain");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.write(responseBody);
