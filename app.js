@@ -13,9 +13,8 @@ const
 startServer(serverOptions);
 
 function onRequest(req, res){
-  //console.log(req);
   console.log("INCOMING REQUEST: " + req.method + " " + req.url);
-  writeReadFile(req.url);
+  //writeReadFile(req.url);
   responseBody = "woo";
   res.statuscode = 200;
   //response.writeHead(200, {"Content-Type": "text/plain"});
