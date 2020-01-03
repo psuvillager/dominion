@@ -1,0 +1,24 @@
+{
+  "name": "dominion",
+  "version": "1.0.0",
+  "description": "dominion",
+  "main": "app.js",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "node-router": "^0.1.6"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/psuvillager/dominion.git"
+  },
+  "author": "Cat Haverback",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/psuvillager/dominion/issues"
+  },
+  "homepage": "https://github.com/psuvillager/dominion#readme"
+}
